@@ -188,8 +188,8 @@ func (c *Client) ValidateSKUAndLocation(ctx context.Context, serverType, locatio
 		}
 
 		// Check if server type is available in the location
-		for _, loc := range st.Locations {
-			if loc.Location != nil && loc.Location.Name == location {
+		for _, stLoc := range st.Locations {
+			if stLoc.Location != nil && stLoc.Location.Name == location {
 				return nil
 			}
 		}
