@@ -127,7 +127,7 @@ func (p *Provisioner) ProvisionSteps() []provision.Step[*resources.Machine] {
 					Image:      image,
 					Location:   &hcloud.Location{Name: location},
 					Labels: map[string]string{
-						"omni-provider": "hetzner",
+						"omni-provider": p.config.Meta.ProviderID,
 						"machine-id":    serverName,
 					},
 				}
