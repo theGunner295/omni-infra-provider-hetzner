@@ -1,0 +1,11 @@
+syntax = "proto3";
+package hetzspecs;
+
+option go_package = "github.com/theGunner295/omni-infra-provider-hetzner/api/specs";
+
+// MachineSpec is stored in Omni in the infra provisioner state.
+message MachineSpec {
+  string server_id = 1;
+  string location = 2;
+  string project_id = 3;
+}

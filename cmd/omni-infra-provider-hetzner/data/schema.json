@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "description": "Hetzner Cloud project ID. Required when multiple projects are configured."
+    },
+    "server_type": {
+      "type": "string",
+      "description": "Hetzner server type/SKU (e.g. cx23, cx32, cx52, cpx21)"
+    },
+    "location": {
+      "type": "string",
+      "description": "Hetzner data center location (e.g. fsn1, nbg1, hel1). Overrides project default_location."
+    },
+    "snapshot_name": {
+      "type": "string",
+      "description": "Name of the Hetzner snapshot to use for VM provisioning. Overrides project snapshot_name."
+    },
+    "network_mode": {
+      "type": "string",
+      "enum": ["public", "private"],
+      "description": "Network mode: 'public' allocates public IPv4/IPv6 (default), 'private' uses an existing VNet."
+    },
+    "network_name": {
+      "type": "string",
+      "description": "Name of the Hetzner private network to attach the server to. Required when network_mode is 'private'."
+    }
+  },
+  "required": [
+    "server_type"
+  ]
+}
