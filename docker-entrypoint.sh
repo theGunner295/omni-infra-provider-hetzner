@@ -4,7 +4,8 @@ set -eu
 require_env() {
     var_name="$1"
 
-    if [ -z "$(eval "printf '%s' \"\${$var_name:-}\"")" ]; then
+    value="$(printenv "$var_name" || true)"
+    if [ -z "$value" ]; then
         echo "error: required environment variable $var_name is not set" >&2
         exit 1
     fi
