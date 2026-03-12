@@ -1,0 +1,22 @@
+1. The omni-infra-provider-hetzner deployment has been installed.
+
+   Provider ID:   {{ .Values.provider.id }}
+   Provider Name: {{ .Values.provider.name }}
+   Omni Endpoint: {{ .Values.omni.apiEndpoint }}
+
+2. Sensitive configuration (Omni service account key and Hetzner API tokens) is stored in:
+
+   Secret: {{ include "omni-infra-provider-hetzner.secretName" . }}
+
+{{- if not .Values.existingSecret }}
+   This Secret was created from your values. To manage it externally (e.g. with
+   external-secrets or Vault), set existingSecret to the name of your pre-existing
+   Secret and remove omni.serviceAccountKey and hetznerConfig from your values.
+{{- else }}
+   Using existing Secret: {{ .Values.existingSecret }}
+{{- end }}
+
+3. To verify the provider is running:
+
+   kubectl get pods -l "app.kubernetes.io/instance={{ .Release.Name }}"
+   kubectl logs -l "app.kubernetes.io/instance={{ .Release.Name }}"

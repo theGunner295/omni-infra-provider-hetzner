@@ -1,0 +1,89 @@
+# Number of replicas. Should remain 1 for this provider to avoid duplicate provisioning.
+replicaCount: 1
+
+image:
+  repository: ghcr.io/thegunner295/omni-infra-provider-hetzner
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created.
+  create: true
+  # Automatically mount a ServiceAccount's API credentials.
+  automount: false
+  # Annotations to add to the service account.
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Omni API configuration
+omni:
+  # Omni API endpoint URL. Required – the provider will not start without this.
+  apiEndpoint: ""
+  # Omni service account key for authentication (sensitive – stored in a Secret).
+  # Required when existingSecret is not set.
+  serviceAccountKey: ""
+
+# Provider identity configuration
+provider:
+  # Provider ID — must match the infra provider label registered in Omni.
+  id: "hetzner"
+  # Human-readable provider name displayed in Omni.
+  name: "hetzner"
+  # Provider description displayed in Omni.
+  description: "Hetzner Cloud infrastructure provider"
+  # Set to true to skip TLS verification for the Omni connection.
+  # Not recommended for production use.
+  insecureSkipVerify: false
+
+# Hetzner provider YAML configuration.
+# This is stored as a Kubernetes Secret because it contains sensitive API tokens.
+# See README for the full configuration reference.
+hetznerConfig: |
+  projects: []
+  # Example:
+  # projects:
+  #   - token: "your-hetzner-api-token"
+  #     project_id: "my-project"
+  #     snapshot_name: "talos-v1.9-amd64"
+  #     default_location: "fsn1"
+
+# Name of an existing Secret to use instead of creating one from the values above.
+# The Secret must contain the following keys:
+#   omniServiceAccountKey  – Omni service account key
+#   hetznerConfig          – Hetzner provider YAML configuration
+existingSecret: ""
