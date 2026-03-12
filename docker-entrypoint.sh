@@ -44,8 +44,7 @@ if ! has_flag --provider-name "$@"; then
     fi
 fi
 
-if ! has_flag --id "$@"; then
-    require_env ID
+if ! has_flag --id "$@" && [ -n "${ID:-}" ]; then
     set -- "$@" --id "${ID}"
 fi
 
