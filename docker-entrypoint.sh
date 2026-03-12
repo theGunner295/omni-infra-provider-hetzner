@@ -28,6 +28,11 @@ has_flag() {
     return 1
 }
 
+# If the first argument is a non-flag command (e.g. "sh" for debugging), pass through directly.
+if [ "$#" -gt 0 ] && [ "${1#-}" = "$1" ]; then
+    exec "$@"
+fi
+
 if ! has_flag --omni-api-endpoint "$@"; then
     require_env OMNI_ENDPOINT
     set -- "$@" --omni-api-endpoint "${OMNI_ENDPOINT}"
