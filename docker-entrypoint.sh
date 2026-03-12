@@ -28,6 +28,21 @@ has_flag() {
     return 1
 }
 
+# If the first argument doesn't start with '-', and resolves to an actual
+# executable in PATH, exec it directly so that commands like
+# `docker run <image> sh` work without going through the provider entrypoint
+# logic. Otherwise, fall through to the provider CLI.
+case "${1:-}" in
+    -* | "") ;;
+    *)
+        if command -v "$1" >/dev/null 2>&1; then
+            exec "$@"
+        fi
+        ;;
+esac
+
+extra_args=""
+
 if ! has_flag --omni-api-endpoint "$@"; then
     require_env OMNI_ENDPOINT
     set -- "$@" --omni-api-endpoint "${OMNI_ENDPOINT}"
