@@ -39,8 +39,9 @@ if ! has_flag --config-file "$@"; then
 fi
 
 if ! has_flag --provider-name "$@"; then
-    require_env PROVIDER_NAME
-    set -- "$@" --provider-name "${PROVIDER_NAME}"
+    if [ -n "${PROVIDER_NAME:-}" ]; then
+        set -- "$@" --provider-name "${PROVIDER_NAME}"
+    fi
 fi
 
 if ! has_flag --id "$@"; then
