@@ -72,8 +72,21 @@ omni-infra-provider-hetzner \
 
 ### Docker Image
 
-When running the container with flag arguments (e.g., `docker run <image> --id=my-id ...`), set `OMNI_ENDPOINT`, `CONFIG_FILE`, `PROVIDER_NAME`, and `ID` via environment variables — the entrypoint injects any that are missing and fails fast if a required one is not set. `OMNI_SERVICE_ACCOUNT_KEY` is read directly by the binary and is not injected into the command line.
+When running the container with flag arguments (e.g., `docker run <image> --id=my-id ...`), the entrypoint can inject some flags from environment variables:
 
+- **Required env vars (when using the default entrypoint):**
+  - `OMNI_ENDPOINT` → `--omni-api-endpoint`
+  - `CONFIG_FILE` → `--config-file`
+- **Optional env vars (override defaults only if set):**
+  - `ID` → `--id` (defaults to `hetzner` if neither flag nor env var is provided)
+  - `PROVIDER_NAME` → `--provider-name` (defaults to `hetzner` if neither flag nor env var is provided)
+
+The entrypoint only injects a flag from an environment variable when **both** of the following are true:
+
+- The corresponding environment variable is non-empty.
+- That flag has **not** already been specified explicitly on `docker run` (explicit flags always take precedence over env-based injection).
+
+`OMNI_SERVICE_ACCOUNT_KEY` is read directly by the binary and is not injected into the command line.
 If the first argument is not a flag (does not start with `-`), the entrypoint passes control directly to that command without running any environment checks. This means `docker run <image> sh` opens a shell. Alternatively, override the entrypoint explicitly: `docker run --entrypoint sh <image>`.
 
 ## Machine Schema
