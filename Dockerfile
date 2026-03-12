@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build the Go app
-RUN go build -o main .
+RUN go build ./cmd/omni-infra-provider-hetzner/
 
 # Start a new stage from scratch
 FROM alpine:latest
@@ -24,7 +24,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 # Copy the Pre-built binary file from the previous stage
-COPY --from=builder /app/main .
+COPY --from=builder /app/omni-infra-provider-hetzner .
 
 # Command to run the executable
-CMD [ "./main" ]
+CMD [ "./omni-infra-provider-hetzner" ]
