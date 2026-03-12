@@ -70,6 +70,10 @@ omni-infra-provider-hetzner \
 | `--provider-description` | `Hetzner Cloud infrastructure provider` | Provider description in Omni |
 | `--insecure-skip-verify` | `false` | Skip TLS verification for Omni connection |
 
+### Docker Image
+
+When running the container image without overriding the entrypoint or command, set `OMNI_ENDPOINT`, `CONFIG_FILE`, `PROVIDER_NAME`, and `ID`. The entrypoint fails fast if any of those are missing. If needed, provide `OMNI_SERVICE_ACCOUNT_KEY` via the environment as well; it is read directly by the binary and is not injected into the container command line.
+
 ## Machine Schema
 
 Each machine request can include per-machine provider configuration:
