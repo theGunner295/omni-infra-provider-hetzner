@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/siderolabs/omni/client/pkg/infra/provision"
 	"github.com/siderolabs/omni/client/pkg/omni/resources/infra"
@@ -181,6 +182,11 @@ func (p *Provisioner) ProvisionSteps() []provision.Step[*resources.Machine] {
 				}
 
 				if err = p.reconcileServerNetworking(ctx, logger, client, result.Server, &data); err != nil {
+					var pe *backoff.PermanentError
+					if errors.As(err, &pe) {
+						return pe.Unwrap()
+					}
+
 					return provision.NewRetryErrorf(time.Second*15, "failed to reconcile server networking: %w", err)
 				}
 
@@ -279,6 +285,11 @@ func (p *Provisioner) ProvisionSteps() []provision.Step[*resources.Machine] {
 				}
 
 				if err = p.reconcileServerNetworking(ctx, logger, client, server, &data); err != nil {
+					var pe *backoff.PermanentError
+					if errors.As(err, &pe) {
+						return pe.Unwrap()
+					}
+
 					return provision.NewRetryErrorf(time.Second*15, "failed to reconcile server networking: %w", err)
 				}
 
@@ -302,14 +313,14 @@ func (p *Provisioner) reconcileServerNetworking(
 
 	networkMode := data.ResolveNetworkMode()
 	if networkMode == NetworkModePrivate && data.NetworkName == "" {
-		return fmt.Errorf("network_name is required when network_mode is %q", NetworkModePrivate)
+		return backoff.Permanent(fmt.Errorf("network_name is required when network_mode is %q", NetworkModePrivate))
 	}
 
 	var desiredNetwork *hcloud.Network
 	if data.NetworkName != "" {
 		network, err := client.FindNetworkByName(ctx, data.NetworkName)
 		if err != nil {
-			return fmt.Errorf("failed to find network %q: %w", data.NetworkName, err)
+			return backoff.Permanent(fmt.Errorf("failed to find network %q: %w", data.NetworkName, err))
 		}
 
 		desiredNetwork = network
