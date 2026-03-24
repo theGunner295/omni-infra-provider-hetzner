@@ -141,12 +141,6 @@ func (p *Provisioner) ProvisionSteps() []provision.Step[*resources.Machine] {
 						return fmt.Errorf("network_name is required when network_mode is %q", NetworkModePrivate)
 					}
 
-					network, err := client.FindNetworkByName(ctx, data.NetworkName)
-					if err != nil {
-						return provision.NewRetryErrorf(time.Second*30, "failed to find network %q: %w", data.NetworkName, err)
-					}
-
-					createOpts.Networks = []*hcloud.Network{network}
 					createOpts.PublicNet = &hcloud.ServerCreatePublicNet{
 						EnableIPv4: false,
 						EnableIPv6: false,
@@ -170,6 +164,7 @@ func (p *Provisioner) ProvisionSteps() []provision.Step[*resources.Machine] {
 					zap.String("location", location),
 					zap.String("snapshot", snapshotName),
 					zap.String("network_mode", networkMode),
+					zap.String("network_name", data.NetworkName),
 				)
 
 				var result hcloud.ServerCreateResult
@@ -183,6 +178,10 @@ func (p *Provisioner) ProvisionSteps() []provision.Step[*resources.Machine] {
 				})
 				if err != nil {
 					return provision.NewRetryErrorf(time.Second*30, "failed to create server: %w", err)
+				}
+
+				if err = p.reconcileServerNetworking(ctx, logger, client, result.Server, &data); err != nil {
+					return provision.NewRetryErrorf(time.Second*15, "failed to reconcile server networking: %w", err)
 				}
 
 				serverID := strconv.FormatInt(result.Server.ID, 10)
@@ -242,7 +241,137 @@ func (p *Provisioner) ProvisionSteps() []provision.Step[*resources.Machine] {
 				return nil
 			},
 		),
+		provision.NewStep(
+			"reconcileServerNetworking",
+			func(ctx context.Context, logger *zap.Logger, pctx provision.Context[*resources.Machine]) error {
+				serverIDStr := pctx.State.TypedSpec().Value.ServerId
+				if serverIDStr == "" {
+					return provision.NewRetryErrorf(time.Second*5, "waiting for server to be created")
+				}
+
+				var data Data
+				if err := pctx.UnmarshalProviderData(&data); err != nil {
+					return fmt.Errorf("failed to unmarshal provider data: %w", err)
+				}
+
+				projectID := pctx.State.TypedSpec().Value.ProjectId
+				if projectID == "" {
+					projectID = data.ProjectID
+				}
+
+				client, _, err := p.clientForProject(projectID)
+				if err != nil {
+					return provision.NewRetryErrorf(time.Second*10, "failed to get project client: %w", err)
+				}
+
+				serverID, err := strconv.ParseInt(serverIDStr, 10, 64)
+				if err != nil {
+					return fmt.Errorf("invalid server ID %q: %w", serverIDStr, err)
+				}
+
+				server, err := client.GetServerByID(ctx, serverID)
+				if err != nil {
+					return provision.NewRetryErrorf(time.Second*10, "failed to get server for networking reconciliation: %w", err)
+				}
+
+				if server == nil {
+					return provision.NewRetryErrorf(time.Second*10, "server not found while reconciling networking")
+				}
+
+				if err = p.reconcileServerNetworking(ctx, logger, client, server, &data); err != nil {
+					return provision.NewRetryErrorf(time.Second*15, "failed to reconcile server networking: %w", err)
+				}
+
+				return nil
+			},
+		),
 	}
+}
+
+// reconcileServerNetworking ensures server private network attachments reflect current provider data.
+func (p *Provisioner) reconcileServerNetworking(
+	ctx context.Context,
+	logger *zap.Logger,
+	client *hclient.Client,
+	server *hcloud.Server,
+	data *Data,
+) error {
+	if server == nil {
+		return fmt.Errorf("server is nil")
+	}
+
+	networkMode := data.ResolveNetworkMode()
+	if networkMode == NetworkModePrivate && data.NetworkName == "" {
+		return fmt.Errorf("network_name is required when network_mode is %q", NetworkModePrivate)
+	}
+
+	var desiredNetwork *hcloud.Network
+	if data.NetworkName != "" {
+		network, err := client.FindNetworkByName(ctx, data.NetworkName)
+		if err != nil {
+			return fmt.Errorf("failed to find network %q: %w", data.NetworkName, err)
+		}
+
+		desiredNetwork = network
+	}
+
+	if desiredNetwork != nil && server.PrivateNetFor(desiredNetwork) == nil {
+		logger.Info("reconciling: attaching server to private network",
+			zap.Int64("server_id", server.ID),
+			zap.String("network_name", desiredNetwork.Name),
+		)
+
+		var attachAction *hcloud.Action
+
+		err := client.Do(ctx, "AttachServerToNetwork", func() error {
+			var innerErr error
+
+			attachAction, _, innerErr = client.Inner().Server.AttachToNetwork(ctx, server, hcloud.ServerAttachToNetworkOpts{Network: desiredNetwork})
+
+			return innerErr
+		})
+		if err != nil {
+			return fmt.Errorf("failed to attach server %d to network %q: %w", server.ID, desiredNetwork.Name, err)
+		}
+
+		if err = waitForAction(ctx, client, attachAction); err != nil {
+			return fmt.Errorf("failed waiting for network attach action on server %d: %w", server.ID, err)
+		}
+	}
+
+	for _, privateNet := range server.PrivateNet {
+		if privateNet.Network == nil {
+			continue
+		}
+
+		if desiredNetwork != nil && privateNet.Network.ID == desiredNetwork.ID {
+			continue
+		}
+
+		logger.Info("reconciling: detaching server from private network",
+			zap.Int64("server_id", server.ID),
+			zap.String("network_name", privateNet.Network.Name),
+		)
+
+		var detachAction *hcloud.Action
+
+		err := client.Do(ctx, "DetachServerFromNetwork", func() error {
+			var innerErr error
+
+			detachAction, _, innerErr = client.Inner().Server.DetachFromNetwork(ctx, server, hcloud.ServerDetachFromNetworkOpts{Network: privateNet.Network})
+
+			return innerErr
+		})
+		if err != nil {
+			return fmt.Errorf("failed to detach server %d from network %q: %w", server.ID, privateNet.Network.Name, err)
+		}
+
+		if err = waitForAction(ctx, client, detachAction); err != nil {
+			return fmt.Errorf("failed waiting for network detach action on server %d: %w", server.ID, err)
+		}
+	}
+
+	return nil
 }
 
 // Deprovision implements provision.Provisioner.

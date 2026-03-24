@@ -33,6 +33,8 @@ type Data struct {
 
 	// NetworkName is the name of the private Hetzner network to attach the server to.
 	// Required when NetworkMode is "private".
+	// When NetworkMode is "public" and this is set, the server will receive a public IP
+	// and also be attached to the specified private network.
 	NetworkName string `yaml:"network_name"`
 }
 
