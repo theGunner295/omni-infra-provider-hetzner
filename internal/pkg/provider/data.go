@@ -36,6 +36,12 @@ type Data struct {
 	// When NetworkMode is "public" and this is set, the server will receive a public IP
 	// and also be attached to the specified private network.
 	NetworkName string `yaml:"network_name"`
+
+	// SSHKeys names Hetzner SSH keys to attach at creation. Talos never uses
+	// them, but a server created without a key makes Hetzner set a root
+	// password and e-mail it to the account owner on every provision. Falls
+	// back to the project's ssh_keys.
+	SSHKeys []string `yaml:"ssh_keys"`
 }
 
 // ResolveNetworkMode returns the effective network mode, defaulting to public.

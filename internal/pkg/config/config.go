@@ -22,6 +22,10 @@ type ProjectConfig struct {
 	SnapshotName string `yaml:"snapshot_name"`
 	// DefaultLocation is the default Hetzner location (e.g. fsn1, nbg1, hel1).
 	DefaultLocation string `yaml:"default_location"`
+
+	// SSHKeys names Hetzner SSH keys attached to every server created in this
+	// project unless the machine request overrides them (see provider.Data).
+	SSHKeys []string `yaml:"ssh_keys"`
 }
 
 // Validate checks if the configuration is valid.

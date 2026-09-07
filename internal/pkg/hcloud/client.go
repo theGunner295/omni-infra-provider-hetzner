@@ -230,3 +230,25 @@ func IsNotFound(err error) bool {
 func IsHTTPNotFound(resp *hcloud.Response) bool {
 	return resp != nil && resp.Response != nil && resp.Response.StatusCode == http.StatusNotFound
 }
+
+// FindSSHKeyByName resolves a Hetzner SSH key by its name.
+func (c *Client) FindSSHKeyByName(ctx context.Context, name string) (*hcloud.SSHKey, error) {
+	var key *hcloud.SSHKey
+
+	err := c.Do(ctx, "GetSSHKeyByName", func() error {
+		var innerErr error
+
+		key, _, innerErr = c.inner.SSHKey.GetByName(ctx, name)
+
+		return innerErr
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if key == nil {
+		return nil, fmt.Errorf("ssh key %q not found", name)
+	}
+
+	return key, nil
+}
