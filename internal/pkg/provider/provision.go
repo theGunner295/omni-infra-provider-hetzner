@@ -134,6 +134,22 @@ func (p *Provisioner) ProvisionSteps() []provision.Step[*resources.Machine] {
 					},
 				}
 
+				// Attach SSH keys so Hetzner does not generate and e-mail a root
+				// password for every server; Talos ignores them either way.
+				sshKeyNames := data.SSHKeys
+				if len(sshKeyNames) == 0 {
+					sshKeyNames = proj.SSHKeys
+				}
+
+				for _, keyName := range sshKeyNames {
+					key, err := client.FindSSHKeyByName(ctx, keyName)
+					if err != nil {
+						return provision.NewRetryErrorf(time.Second*30, "failed to find ssh key %q: %w", keyName, err)
+					}
+
+					createOpts.SSHKeys = append(createOpts.SSHKeys, key)
+				}
+
 				// Configure networking mode
 				networkMode := data.ResolveNetworkMode()
 
